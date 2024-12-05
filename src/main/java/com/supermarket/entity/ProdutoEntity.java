@@ -26,7 +26,10 @@ public class ProdutoEntity {
     @Enumerated(EnumType.STRING)
     private GeneroProduto genero;
 
+    @Column(nullable = false)
     private String lote;
+
+    @Column(nullable = false)
     private boolean ativo = true;
 }
 

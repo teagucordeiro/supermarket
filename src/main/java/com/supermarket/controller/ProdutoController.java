@@ -2,62 +2,68 @@ package com.supermarket.controller;
 
 import com.supermarket.dto.ProdutoDTO;
 import com.supermarket.entity.ProdutoEntity;
-import com.supermarket.entity.GeneroProduto;
-import com.supermarket.repository.ProdutoRepository;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.supermarket.service.ProdutoService;
+import jakarta.persistence.EntityNotFoundException;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 @RestController
 @RequestMapping("/produtos")
+@RequiredArgsConstructor
 public class ProdutoController {
-
-    @Autowired
-    private ProdutoRepository produtoRepository;
+    private final ProdutoService produtoService;
 
     @GetMapping
-    public List<ProdutoEntity> getAll() {
-        return produtoRepository.findAll().stream().filter(ProdutoEntity::isAtivo).toList();
+    public ResponseEntity<List<ProdutoEntity>> getAll() {
+        return ResponseEntity.ok(produtoService.getAll()) ;
     }
 
+
     @GetMapping("/{id}")
-    public ProdutoEntity getById(@PathVariable Long id) {
-        return produtoRepository.findById(id).orElse(null);
+    public ResponseEntity<ProdutoEntity> getById(@PathVariable Long id) {
+        try {
+            return ResponseEntity.ok(produtoService.getById(id));
+        } catch (EntityNotFoundException ex) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+        }
     }
 
     @PostMapping
-    public ProdutoEntity postProduto(@RequestBody ProdutoDTO produtoDTO) {
-        ProdutoEntity produto = new ProdutoEntity(null, produtoDTO.nomeProduto(), produtoDTO.marca(), produtoDTO.dataFabricacao(), produtoDTO.dataValidade(), GeneroProduto.valueOf(produtoDTO.genero()), produtoDTO.lote(), true);
-        return produtoRepository.save(produto);
+    public ResponseEntity<ProdutoEntity> postProduto(@RequestBody ProdutoDTO produtoDTO) {
+        ProdutoEntity created = produtoService.create(produtoDTO);
+        return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
-    @PutMapping
-    public ProdutoEntity putProduto(@RequestBody ProdutoDTO produtoDTO) {
-        ProdutoEntity produto = produtoRepository.findById(produtoDTO.id()).orElse(null);
-        if (produto != null && produto.isAtivo()) {
-            produto.setNomeProduto(produtoDTO.nomeProduto());
-            produto.setMarca(produtoDTO.marca());
-            produto.setDataFabricacao(produtoDTO.dataFabricacao());
-            produto.setDataValidade(produtoDTO.dataValidade());
-            produto.setGenero(GeneroProduto.valueOf(produtoDTO.genero()));
-            produto.setLote(produtoDTO.lote());
-            return produtoRepository.save(produto);
+    @PutMapping("/{id}")
+    public ResponseEntity<ProdutoEntity> putProduto(@PathVariable Long id, @RequestBody ProdutoDTO produtoDTO) {
+        try {
+            return ResponseEntity.ok(produtoService.update(produtoDTO));
+        } catch (EntityNotFoundException ex) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
         }
-        return null;
     }
 
     @DeleteMapping("/{id}")
-    public void deleteProduto(@PathVariable Long id) {
-        produtoRepository.deleteById(id);
+    public ResponseEntity<Void> deleteProduto(@PathVariable Long id) {
+        try {
+            produtoService.delete(id);
+            return ResponseEntity.noContent().build();
+        } catch (EntityNotFoundException ex) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        }
     }
 
     @DeleteMapping("/logic/{id}")
-    public void deleteLogic(@PathVariable Long id) {
-        ProdutoEntity produto = produtoRepository.findById(id).orElse(null);
-        if (produto != null) {
-            produto.setAtivo(false);
-            produtoRepository.save(produto);
+    public ResponseEntity<Void> deleteLogic(@PathVariable Long id) {
+        try {
+            produtoService.logicDelete(id);
+            return ResponseEntity.noContent().build();
+        } catch (EntityNotFoundException ex) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
         }
     }
 }
